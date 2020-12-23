@@ -3,7 +3,7 @@ import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Data.Void
-import Debug.Trace
+import Data.List
 import qualified Data.List.Split as S
 import qualified Data.Map as M
 
@@ -51,39 +51,45 @@ rulesPsr = try $ do
   rules <- sepEndBy rulePsr (char '\n')
   return rules
 
--- this is wrong... needs to return a list of strings
--- also how to case by type?
-process m = possible where
-  step o k = case M.lookup k m of
-    Just CharRule c -> [c]
-    Just SubRule x -> concatMap (\l -> o ++ (foldl (\v k -> step v k) "" l) ) x
-  possible = step [] 0
+isCharRule (CharRule _) = True
+isCharRule _ = False
+isSubRule (SubRule _) = True
+isSubRule _ = False
 
--- mebbe I should build a tree?
--- 0
--- | 4 -> a
--- | 1 -> 2 -> 4 4 -> aa
---      L 3 -> 4 5 -> ab
--- -   -> 3
---      L 2 
-{-
-  function thingy (map) {
-    function build(o, k) {
-      let v = map[k];
-      if (typeof v == "String") return o.concat(v);
-      return build(
-    }
-    return map[0].reduce((o, k) =>  , []);
-  }
--}
+getCharVal (CharRule x) = x
+getSubVal (SubRule x) = x
+
+cProd f xs ys = [f x y | x <- xs, y <- ys]
+fSnds f l = map (\(a,b) -> (a, f b)) l
+
+process m id = foo id where
+  foo k = case M.lookup k m of
+    Just x -> concatMap (\l -> foldl (\b i -> cProd (++) b (foo i)) [[]] l ) x
+    Nothing -> [[k]]
+
+process2 m mx = foo 0 0 where
+  foo k d = if d == mx then [[k]] else case M.lookup k m of
+    Just x -> concatMap (\l -> foldl (\b i -> cProd (++) b (foo i (d+1))) [[]] l ) x
+    Nothing -> [[k]]
 
 solution inp = do
   let [rs, ms] = S.splitOn "\n\n" inp
   case parse rulesPsr "" rs of
     Right x -> do
-      --let m = M.fromList x
-      print $ process x
-      --print $ M.fromList x  
+      let chars = M.fromList $ fSnds getCharVal (filter ((isCharRule).snd) x)
+      let subs = M.fromList $ fSnds getSubVal (filter ((isSubRule).snd) x)
+      let strs = map (map (chars M.!)) (process subs 0)
+      let msgs = lines ms
+      let mx = maximum (map length msgs)
+      let matches = intersect msgs strs
+      print $ length matches
+      let p2Subs = M.delete 8 (M.delete 11 subs)
+      let p2Chars = M.insert 8 'c' (M.insert 11 'd' chars)
+      -- I don't expect this to work. 
+      let p2Strs = map (map (p2Chars M.!)) (process2 p2Subs mx)
+      print p2Strs
+      --let p2Matches = intersect msgs p2Strs
+      --print $ length p2Matches
 
 main = do
   inp <- getContents
