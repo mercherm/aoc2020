@@ -1,8 +1,11 @@
 module Advent (
   toInt,
   combinations,
-  pivot
+  pivot,
+  addTup
 ) where
+
+addTup (a, b) (c, d) = (a + c, b + d)
 
 combinations a b = if a == 1 
     then map (\x -> [x]) b 
