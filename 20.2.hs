@@ -2,7 +2,6 @@ import Advent
 import Data.List
 import Data.List.Split
 import qualified Data.Map as M
-import qualified Data.Set as U
 
 rot g = map (\y -> reverse $ map (!!y) g) [0..(length g - 1)]
 
